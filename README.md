@@ -1,2 +1,3 @@
 # 7_day_golang_implement_from_zero
+用于和gitbook内容进行同步
 7天从零实现golang项目
