@@ -3,12 +3,12 @@
 * [分布式缓存 - GeeCache](GeeCache/GeeCache.md)
   * [序言](GeeCache/GeeCache.md)
   * [Day 1 缓存淘汰策略](GeeCache/Day1缓存淘汰策略.md)
-  * [Day 2 单机并发缓存](GeeCache/Day 2 单机并发缓存.md)
-  * [Day 3 HTTP服务端](GeeCache/Day 3 HTTP服务端.md)
-  * [Day 4 一致性哈希](Day 4 一致性哈希.md)
-  * [Day 5 分布式节点](GeeCache/Day 5 分布式节点.md)
-  * [Day 6 防止缓存击穿](GeeCache/Day 6 防止缓存击穿.md)
-  * [Day 7 使用Protobuf通信](GeeCache/Day 7 使用Protobuf通信.md)
+  * [Day 2 单机并发缓存](GeeCache/Day2单机并发缓存.md)
+  * [Day 3 HTTP服务端](GeeCache/Day3HTTP服务端.md)
+  * [Day 4 一致性哈希](Day4一致性哈希.md)
+  * [Day 5 分布式节点](GeeCache/Day5分布式节点.md)
+  * [Day 6 防止缓存击穿](GeeCache/Day6防止缓存击穿.md)
+  * [Day 7 使用Protobuf通信](GeeCache/Day7使用Protobuf通信.md)
 
 * [RPC框架 - GeeRPC](GeeGrpc/GeeGrpc.md)
 
