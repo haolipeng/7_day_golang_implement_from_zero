@@ -1,8 +1,8 @@
 # 目录
 
-* 分布式缓存 - GeeCache
+* [分布式缓存 - GeeCache](GeeCache/GeeCache.md)
   * [序言](GeeCache/GeeCache.md)
-  * [Day 1 缓存淘汰策略](GeeCache/Day 1 缓存淘汰策略.md)
+  * [Day 1 缓存淘汰策略](GeeCache/Day1缓存淘汰策略.md)
   * [Day 2 单机并发缓存](GeeCache/Day 2 单机并发缓存.md)
   * [Day 3 HTTP服务端](GeeCache/Day 3 HTTP服务端.md)
   * [Day 4 一致性哈希](Day 4 一致性哈希.md)
