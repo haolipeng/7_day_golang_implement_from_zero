@@ -38,9 +38,10 @@ func main() {
 	//注册rpc对象
 	arith := new(Arith)
 	rpc.Register(arith)
+	//rpc.RegisterName()
 
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", ":1234")
+	l, err := net.Listen("tcp", ":1234")
 	if err != nil {
 		log.Fatal("listen error:", e)
 	}
