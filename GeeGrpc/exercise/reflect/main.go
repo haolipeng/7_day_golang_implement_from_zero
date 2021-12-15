@@ -42,7 +42,12 @@ func PrintFieldName(val interface{}) {
 
 //SetFuncField 尝试篡改字段内容
 func SetFuncField(val interface{}) {
-	//判断kind类型
+	tkind := reflect.TypeOf(val).Kind()
+	if tkind == reflect.Struct {
+		fmt.Println("对象的类型信息")
+	}
+
+	//判断值运行时的kind类型
 	kind := reflect.ValueOf(val).Kind()
 	if kind == reflect.Ptr {
 		fmt.Println("指针类型")
