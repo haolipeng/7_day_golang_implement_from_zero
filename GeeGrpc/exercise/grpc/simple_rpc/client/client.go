@@ -1,7 +1,7 @@
 package main
 
 import (
-	"7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/pb"
+	"7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/simple_rpc/pb"
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
@@ -16,7 +16,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	//通过连接创建client对象
+	//创建 Greeter 的客户端对象
 	client := pb.NewGreeterClient(conn)
 
 	req := pb.HelloRequest{Name: "haolipeng"}
