@@ -14,6 +14,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.Close()
 
 	//通过连接创建client对象
 	client := pb.NewGreeterClient(conn)
