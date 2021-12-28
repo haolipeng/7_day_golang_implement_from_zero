@@ -2,23 +2,27 @@ package main
 
 import (
 	streamClientPb "7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/client_stream_rpc/pb"
+	"fmt"
 	"google.golang.org/grpc"
 	"io"
 	"log"
 	"net"
 )
 
-type GreeterServer struct {
+type SimpleService struct {
 }
 
 //SayHello 实现接口
-func (gs *GreeterServer) SayHello(srv streamClientPb.Greeter_SayHelloServer) error {
+func (gs *SimpleService) SayHello(srv streamClientPb.StreamClient_SayHelloServer) error {
 	//从stream流中获取消息
-	for true {
+	for {
 		res, err := srv.Recv()
-		//判断流数据是否接触
+		//判断流数据是否结束
 		if err == io.EOF {
-			return srv.SendAndClose(&streamClientPb.HelloReply{Message: "close connection"})
+			//发送结果，并关闭
+			fmt.Println("server received data finished")
+
+			return srv.SendAndClose(&streamClientPb.SimpleReply{Message: "server done, close connection"})
 		}
 		if err != nil {
 			return err
@@ -36,7 +40,7 @@ func main() {
 	rpcServer := grpc.NewServer()
 
 	//将GreeterServer服务注册到gRPC server
-	streamClientPb.RegisterGreeterServer(rpcServer, new(GreeterServer))
+	streamClientPb.RegisterStreamClientServer(rpcServer, new(SimpleService))
 
 	//创建 Listen，监听 TCP 的8081端口
 	l, err := net.Listen("tcp", ":8081")

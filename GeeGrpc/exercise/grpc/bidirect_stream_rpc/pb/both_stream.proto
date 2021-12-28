@@ -9,12 +9,12 @@ message StreamRequest {
 }
 
 // The response message containing the greetings
-message SimpleReply {
+message StreamReply {
   string message = 1;
 }
 
 // The greeting service definition.
-service StreamClient {
-  // 客户端流式rpc，在请求的参数前添加stream
-  rpc SayHello (stream StreamRequest) returns (SimpleReply) {}
+service Stream {
+  // 双向流式rpc，同时在请求参数前和响应参数前加上stream
+  rpc Conversations(stream StreamRequest) returns(stream StreamReply){};
 }
