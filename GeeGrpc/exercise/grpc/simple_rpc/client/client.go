@@ -1,7 +1,7 @@
 package main
 
 import (
-	"7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/simple_rpc/pb"
+	simplePb "7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/simple_rpc/pb"
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
@@ -17,11 +17,11 @@ func main() {
 	defer conn.Close()
 
 	//创建 Greeter 的客户端对象
-	client := pb.NewGreeterClient(conn)
+	client := simplePb.NewGreeterClient(conn)
 
-	req := pb.HelloRequest{Name: "haolipeng"}
+	//构造请求数据，并进行rpc调用
+	req := simplePb.SimpleRequest{Name: "haolipeng"}
 
-	//rpc调用
 	reply, err := client.SayHello(context.Background(), &req)
 	if err != nil {
 		log.Fatal(err)

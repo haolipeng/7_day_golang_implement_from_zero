@@ -2,18 +2,20 @@ syntax = "proto3";
 package pb;
 
 option go_package = "../pb";
-// The greeting service definition.
-service Greeter {
-  // Sends a greeting
-  rpc SayHello (HelloRequest) returns (stream HelloReply) {}
-}
 
 // The request message containing the user's name.
-message HelloRequest {
+message SimpleRequest {
   string name = 1;
 }
 
 // The response message containing the greetings
-message HelloReply {
+// 定义流式响应信息
+message StreamReply {
   string message = 1;
+}
+
+// The greeting service definition.
+service StreamServer {
+  // 服务端流式rpc，在响应数据前添加stream关键字
+  rpc SayHello (SimpleRequest) returns (stream StreamReply) {}
 }

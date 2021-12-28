@@ -1,7 +1,7 @@
 package main
 
 import (
-	"7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/simple_rpc/pb"
+	simplePb "7_day_golang_implement_from_zero/GeeGrpc/exercise/grpc/simple_rpc/pb"
 	"context"
 	"google.golang.org/grpc"
 	"log"
@@ -11,11 +11,11 @@ import (
 type GreeterServer struct {
 }
 
-func (*GreeterServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
+func (*GreeterServer) SayHello(ctx context.Context, req *simplePb.SimpleRequest) (*simplePb.SimpleReply, error) {
 	//获取请求字段
 	name := req.GetName()
 
-	return &pb.HelloReply{Message: "hello " + name}, nil
+	return &simplePb.SimpleReply{Message: "hello " + name}, nil
 }
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 	rpcServer := grpc.NewServer()
 
 	//将GreeterServer服务注册到gRPC server
-	pb.RegisterGreeterServer(rpcServer, new(GreeterServer))
+	simplePb.RegisterGreeterServer(rpcServer, new(GreeterServer))
 
 	//创建 Listen，监听 TCP 的8081端口
 	l, err := net.Listen("tcp", ":8081")

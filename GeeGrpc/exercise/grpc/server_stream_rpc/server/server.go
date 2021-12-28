@@ -8,17 +8,16 @@ import (
 	"strconv"
 )
 
-type GreeterServer struct {
+type StreamService struct {
 }
 
 //SayHello 实现接口
-func (gs *GreeterServer) SayHello(req *streamServerPb.HelloRequest, srv streamServerPb.Greeter_SayHelloServer) error {
+func (s *StreamService) SayHello(req *streamServerPb.SimpleRequest, srv streamServerPb.StreamServer_SayHelloServer) error {
 	var err error
-
 	// 向流中发送消息， 默认每次send送消息最大长度为`math.MaxInt32`bytes
 	// 构造不同数据，发送多个响应给客户端
 	for n := 0; n < 5; n++ {
-		reply := &streamServerPb.HelloReply{Message: req.GetName() + strconv.Itoa(n)}
+		reply := &streamServerPb.StreamReply{Message: req.GetName() + strconv.Itoa(n)}
 
 		err = srv.Send(reply)
 		if err != nil {
@@ -34,7 +33,7 @@ func main() {
 	rpcServer := grpc.NewServer()
 
 	//将GreeterServer服务注册到gRPC server
-	streamServerPb.RegisterGreeterServer(rpcServer, new(GreeterServer))
+	streamServerPb.RegisterStreamServerServer(rpcServer, new(StreamService))
 
 	//创建 Listen，监听 TCP 的8081端口
 	l, err := net.Listen("tcp", ":8081")
