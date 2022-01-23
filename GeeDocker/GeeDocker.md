@@ -48,6 +48,8 @@ image的manifest的哈希值，取前12位。
 
 
 
+images.json文件是我们自己维护？还是docker的镜像中本来就有这部分的信息。
+
 所有images镜像的信息，存储在images.json文件中
 
 /var/lib/gocker/images/images.json
@@ -58,13 +60,13 @@ image的manifest的哈希值，取前12位。
 					"18.04": "[image-hash]",
 					"18.10": "[image-hash]",
 					"19.04": "[image-hash]",
-					"19.10": "[image-hash]",
+					"19.10": "[image-hash]"
 				},
 	"centos" : {
 					"6.0": "[image-hash]",
 					"6.1": "[image-hash]",
 					"6.2": "[image-hash]",
-					"7.0": "[image-hash]",
+					"7.0": "[image-hash]"
 				}
 }
 ```
@@ -83,7 +85,7 @@ map[string] map[string] string
 
 
 
-TODO:编写demo验证功能
+TODO:编写demo验证功能（已完成）
 
 crane.Pull和crane.SaveLegacy函数
 
