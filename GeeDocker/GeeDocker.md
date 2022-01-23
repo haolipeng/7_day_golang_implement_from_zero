@@ -119,6 +119,12 @@ https://github.com/mholt/archiver
 
 
 
+使用goland进行远程build时，
+
+/usr/local/go/bin/go build -o /home/work/7_day_golang_implement_from_zero/H0Jahh6npq/go_build_7_day_golang_implement_from_zero_linux -gcflags all=-N -l 7_day_golang_implement_from_zero
+
+
+
 ### 3、处理镜像的layer分层
 
 - 从指定镜像的manifest.json中解析出镜像的layer分层，/var/lib/gocker/tmp/c059bfaa849c/manifest.json
