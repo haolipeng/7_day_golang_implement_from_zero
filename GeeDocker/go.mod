@@ -3,22 +3,14 @@ module 7_day_golang_implement_from_zero/GeeDocker
 go 1.17
 
 require (
-	github.com/google/go-containerregistry v0.8.0
+	//v0.8.0
+	github.com/google/go-containerregistry v0.1.1
 	github.com/pkg/errors v0.9.1
 )
 
 require (
-	github.com/containerd/stargz-snapshotter/estargz v0.10.1 // indirect
-	github.com/docker/cli v20.10.12+incompatible // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.12+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.6.4 // indirect
-	github.com/klauspost/compress v1.14.1 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.2-0.20211117181255-693428a734f5 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/vbatts/tar-split v0.11.2 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017 // indirect
+	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7 // indirect
+	github.com/docker/docker-credential-helpers v0.6.3 // indirect
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
 )
