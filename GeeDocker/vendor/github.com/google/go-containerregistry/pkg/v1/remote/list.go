@@ -31,22 +31,20 @@ type tags struct {
 	Tags []string `json:"tags"`
 }
 
-// ListWithContext calls List with the given context.
-//
-// Deprecated: Use List and WithContext. This will be removed in a future release.
-func ListWithContext(ctx context.Context, repo name.Repository, options ...Option) ([]string, error) {
-	return List(repo, append(options, WithContext(ctx))...)
+// List wraps ListWithContext using the background context.
+func List(repo name.Repository, options ...Option) ([]string, error) {
+	return ListWithContext(context.Background(), repo, options...)
 }
 
-// List calls /tags/list for the given repository, returning the list of tags
+// ListWithContext calls /tags/list for the given repository, returning the list of tags
 // in the "tags" property.
-func List(repo name.Repository, options ...Option) ([]string, error) {
+func ListWithContext(ctx context.Context, repo name.Repository, options ...Option) ([]string, error) {
 	o, err := makeOptions(repo, options...)
 	if err != nil {
 		return nil, err
 	}
 	scopes := []string{repo.Scope(transport.PullScope)}
-	tr, err := transport.NewWithContext(o.context, repo.Registry, o.auth, o.transport, scopes)
+	tr, err := transport.New(repo.Registry, o.auth, o.transport, scopes)
 	if err != nil {
 		return nil, err
 	}
@@ -55,10 +53,9 @@ func List(repo name.Repository, options ...Option) ([]string, error) {
 		Scheme: repo.Registry.Scheme(),
 		Host:   repo.Registry.RegistryStr(),
 		Path:   fmt.Sprintf("/v2/%s/tags/list", repo.RepositoryStr()),
-	}
-
-	if o.pageSize > 0 {
-		uri.RawQuery = fmt.Sprintf("n=%d", o.pageSize)
+		// ECR returns an error if n > 1000:
+		// https://github.com/google/go-containerregistry/issues/681
+		RawQuery: "n=1000",
 	}
 
 	client := http.Client{Transport: tr}
@@ -68,15 +65,16 @@ func List(repo name.Repository, options ...Option) ([]string, error) {
 	// get responses until there is no next page
 	for {
 		select {
-		case <-o.context.Done():
-			return nil, o.context.Err()
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		default:
 		}
 
-		req, err := http.NewRequestWithContext(o.context, "GET", uri.String(), nil)
+		req, err := http.NewRequest("GET", uri.String(), nil)
 		if err != nil {
 			return nil, err
 		}
+		req = req.WithContext(ctx)
 
 		resp, err := client.Do(req)
 		if err != nil {

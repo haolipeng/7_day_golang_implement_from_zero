@@ -17,7 +17,6 @@ package layout
 import (
 	"fmt"
 	"io"
-	"os"
 	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -85,18 +84,25 @@ func (li *layoutImage) LayerByDigest(h v1.Hash) (partial.CompressedLayer, error)
 	}
 
 	if h == manifest.Config.Digest {
-		return &compressedBlob{
+		return partial.CompressedLayer(&compressedBlob{
 			path: li.path,
 			desc: manifest.Config,
-		}, nil
+		}), nil
 	}
 
 	for _, desc := range manifest.Layers {
 		if h == desc.Digest {
-			return &compressedBlob{
-				path: li.path,
-				desc: desc,
-			}, nil
+			switch desc.MediaType {
+			case types.OCILayer, types.DockerLayer:
+				return partial.CompressedToLayer(&compressedBlob{
+					path: li.path,
+					desc: desc,
+				})
+			default:
+				// TODO: We assume everything is a compressed blob, but that might not be true.
+				// TODO: Handle foreign layers.
+				return nil, fmt.Errorf("unexpected media type: %v for layer: %v", desc.MediaType, desc.Digest)
+			}
 		}
 	}
 
@@ -122,18 +128,4 @@ func (b *compressedBlob) Size() (int64, error) {
 
 func (b *compressedBlob) MediaType() (types.MediaType, error) {
 	return b.desc.MediaType, nil
-}
-
-// Descriptor implements partial.withDescriptor.
-func (b *compressedBlob) Descriptor() (*v1.Descriptor, error) {
-	return &b.desc, nil
-}
-
-// See partial.Exists.
-func (b *compressedBlob) Exists() (bool, error) {
-	_, err := os.Stat(b.path.blobPath(b.desc.Digest))
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return err == nil, err
 }

@@ -8,7 +8,7 @@ per the [OCI distribution spec](https://github.com/opencontainers/distribution-s
 It leans heavily on the lower level [`transport`](/pkg/v1/remote/transport) package, which handles the
 authentication handshake and structured errors.
 
-## Usage
+## Usage 
 
 ```go
 package main
@@ -76,7 +76,7 @@ which references an application/xml file from an image index.
 
 That could look something like this:
 
-![strange image index anatomy](/images/index-anatomy-strange.dot.svg)
+![exotic image index anatomy](/images/index-anatomy-exotic.dot.svg)
 
 Using a recursive index like this might not be possible with all registries,
 but this flexibility allows for some interesting applications, e.g. the
@@ -114,4 +114,4 @@ however, it's possible to do _something_ useful with them via [`remote.Get`](htt
 which doesn't try to interpret what is returned by the registry.
 
 [`crane.Copy`](https://godoc.org/github.com/google/go-containerregistry/pkg/crane#Copy) takes advantage of this to implement support for copying schema 1 images,
-see [here](https://github.com/google/go-containerregistry/blob/main/pkg/internal/legacy/copy.go).
+see [here](https://github.com/google/go-containerregistry/blob/master/pkg/internal/legacy/copy.go).

@@ -24,42 +24,17 @@ import (
 )
 
 // Load reads the tarball at path as a v1.Image.
-func Load(path string, opt ...Option) (v1.Image, error) {
-	return LoadTag(path, "")
-}
-
-// LoadTag reads a tag from the tarball at path as a v1.Image.
-// If tag is "", will attempt to read the tarball as a single image.
-func LoadTag(path, tag string, opt ...Option) (v1.Image, error) {
-	if tag == "" {
-		return tarball.ImageFromPath(path, nil)
-	}
-
-	o := makeOptions(opt...)
-	t, err := name.NewTag(tag, o.Name...)
-	if err != nil {
-		return nil, fmt.Errorf("parsing tag %q: %w", tag, err)
-	}
-	return tarball.ImageFromPath(path, &t)
+func Load(path string) (v1.Image, error) {
+	// TODO: Allow tag?
+	return tarball.ImageFromPath(path, nil)
 }
 
 // Push pushes the v1.Image img to a registry as dst.
 func Push(img v1.Image, dst string, opt ...Option) error {
 	o := makeOptions(opt...)
-	tag, err := name.ParseReference(dst, o.Name...)
+	tag, err := name.NewTag(dst, o.name...)
 	if err != nil {
-		return fmt.Errorf("parsing reference %q: %w", dst, err)
+		return fmt.Errorf("parsing tag %q: %v", dst, err)
 	}
-	return remote.Write(tag, img, o.Remote...)
-}
-
-// Upload pushes the v1.Layer to a given repo.
-func Upload(layer v1.Layer, repo string, opt ...Option) error {
-	o := makeOptions(opt...)
-	ref, err := name.NewRepository(repo, o.Name...)
-	if err != nil {
-		return fmt.Errorf("parsing repo %q: %w", repo, err)
-	}
-
-	return remote.WriteLayer(ref, layer, o.Remote...)
+	return remote.Write(tag, img, o.remote...)
 }

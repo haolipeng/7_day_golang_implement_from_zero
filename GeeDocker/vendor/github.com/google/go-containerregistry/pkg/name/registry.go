@@ -21,6 +21,12 @@ import (
 	"strings"
 )
 
+const (
+	// DefaultRegistry is Docker Hub, assumed when a hostname is omitted.
+	DefaultRegistry      = "index.docker.io"
+	defaultRegistryAlias = "docker.io"
+)
+
 // Detect more complex forms of local references.
 var reLocal = regexp.MustCompile(`.*\.local(?:host)?(?::\d{1,5})?$`)
 
@@ -38,7 +44,10 @@ type Registry struct {
 
 // RegistryStr returns the registry component of the Registry.
 func (r Registry) RegistryStr() string {
-	return r.registry
+	if r.registry != "" {
+		return r.registry
+	}
+	return DefaultRegistry
 }
 
 // Name returns the name from which the Registry was derived.
@@ -98,7 +107,7 @@ func checkRegistry(name string) error {
 	// Per RFC 3986, registries (authorities) are required to be prefixed with "//"
 	// url.Host == hostname[:port] == authority
 	if url, err := url.Parse("//" + name); err != nil || url.Host != name {
-		return newErrBadName("registries must be valid RFC 3986 URI authorities: %s", name)
+		return NewErrBadName("registries must be valid RFC 3986 URI authorities: %s", name)
 	}
 	return nil
 }
@@ -108,16 +117,13 @@ func checkRegistry(name string) error {
 func NewRegistry(name string, opts ...Option) (Registry, error) {
 	opt := makeOptions(opts...)
 	if opt.strict && len(name) == 0 {
-		return Registry{}, newErrBadName("strict validation requires the registry to be explicitly defined")
+		return Registry{}, NewErrBadName("strict validation requires the registry to be explicitly defined")
 	}
 
 	if err := checkRegistry(name); err != nil {
 		return Registry{}, err
 	}
 
-	if name == "" {
-		name = opt.defaultRegistry
-	}
 	// Rewrite "docker.io" to "index.docker.io".
 	// See: https://github.com/google/go-containerregistry/issues/68
 	if name == defaultRegistryAlias {

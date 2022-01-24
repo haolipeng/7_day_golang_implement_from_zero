@@ -98,9 +98,18 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer, opts ...
 		}
 	}
 
-	size, mBytes, err := getSizeAndManifest(refToImage)
+	m, err := calculateManifest(refToImage)
 	if err != nil {
-		return sendUpdateReturn(o, err)
+		return sendUpdateReturn(o, fmt.Errorf("error calculating manifest: %v", err))
+	}
+	mBytes, err := json.Marshal(m)
+	if err != nil {
+		return sendUpdateReturn(o, fmt.Errorf("could not marshall manifest to bytes: %v", err))
+	}
+
+	size, err := calculateTarballSize(refToImage, mBytes)
+	if err != nil {
+		return sendUpdateReturn(o, fmt.Errorf("error calculating tarball size: %v", err))
 	}
 
 	return writeImagesToTar(refToImage, mBytes, size, w, o)
@@ -222,10 +231,6 @@ func writeImagesToTar(refToImage map[name.Reference]v1.Image, m []byte, size int
 func calculateManifest(refToImage map[name.Reference]v1.Image) (m Manifest, err error) {
 	imageToTags := dedupRefToImage(refToImage)
 
-	if len(imageToTags) == 0 {
-		return nil, errors.New("set of images is empty")
-	}
-
 	for img, tags := range imageToTags {
 		cfgName, err := img.ConfigName()
 		if err != nil {
@@ -288,45 +293,26 @@ func calculateManifest(refToImage map[name.Reference]v1.Image) (m Manifest, err 
 	return m, nil
 }
 
-// CalculateSize calculates the expected complete size of the output tar file
-func CalculateSize(refToImage map[name.Reference]v1.Image) (size int64, err error) {
-	size, _, err = getSizeAndManifest(refToImage)
-	return size, err
-}
-
-func getSizeAndManifest(refToImage map[name.Reference]v1.Image) (int64, []byte, error) {
-	m, err := calculateManifest(refToImage)
-	if err != nil {
-		return 0, nil, fmt.Errorf("unable to calculate manifest: %w", err)
-	}
-	mBytes, err := json.Marshal(m)
-	if err != nil {
-		return 0, nil, fmt.Errorf("could not marshall manifest to bytes: %w", err)
-	}
-
-	size, err := calculateTarballSize(refToImage, mBytes)
-	if err != nil {
-		return 0, nil, fmt.Errorf("error calculating tarball size: %w", err)
-	}
-	return size, mBytes, nil
-}
-
 // calculateTarballSize calculates the size of the tar file
-func calculateTarballSize(refToImage map[name.Reference]v1.Image, mBytes []byte) (size int64, err error) {
+func calculateTarballSize(refToImage map[name.Reference]v1.Image, m []byte) (size int64, err error) {
 	imageToTags := dedupRefToImage(refToImage)
 
 	for img, name := range imageToTags {
 		manifest, err := img.Manifest()
 		if err != nil {
-			return size, fmt.Errorf("unable to get manifest for img %s: %w", name, err)
+			return size, fmt.Errorf("unable to get manifest for img %s: %v", name, err)
 		}
-		size += calculateSingleFileInTarSize(manifest.Config.Size)
+		size += CalculateTarFileSize(manifest.Config.Size)
 		for _, l := range manifest.Layers {
-			size += calculateSingleFileInTarSize(l.Size)
+			size += CalculateTarFileSize(l.Size)
 		}
 	}
 	// add the manifest
-	size += calculateSingleFileInTarSize(int64(len(mBytes)))
+	mBytes, err := json.Marshal(m)
+	if err != nil {
+		return size, err
+	}
+	size += CalculateTarFileSize(int64(len(mBytes)))
 
 	// add the two padding blocks that indicate end of a tar file
 	size += 1024
@@ -338,24 +324,15 @@ func dedupRefToImage(refToImage map[name.Reference]v1.Image) map[v1.Image][]stri
 
 	for ref, img := range refToImage {
 		if tag, ok := ref.(name.Tag); ok {
-			if tags, ok := imageToTags[img]; !ok || tags == nil {
-				imageToTags[img] = []string{}
+			if tags, ok := imageToTags[img]; ok && tags != nil {
+				imageToTags[img] = append(tags, tag.String())
+			} else {
+				imageToTags[img] = []string{tag.String()}
 			}
-			// Docker cannot load tarballs without an explicit tag:
-			// https://github.com/google/go-containerregistry/issues/890
-			//
-			// We can't use the fully qualified tag.Name() because of rules_docker:
-			// https://github.com/google/go-containerregistry/issues/527
-			//
-			// If the tag is "latest", but tag.String() doesn't end in ":latest",
-			// just append it. Kind of gross, but should work for now.
-			ts := tag.String()
-			if tag.Identifier() == name.DefaultTag && !strings.HasSuffix(ts, ":"+name.DefaultTag) {
-				ts = fmt.Sprintf("%s:%s", ts, name.DefaultTag)
+		} else {
+			if _, ok := imageToTags[img]; !ok {
+				imageToTags[img] = nil
 			}
-			imageToTags[img] = append(imageToTags[img], ts)
-		} else if _, ok := imageToTags[img]; !ok {
-			imageToTags[img] = nil
 		}
 	}
 
@@ -439,10 +416,10 @@ func (pw *progressWriter) Close() error {
 	return io.EOF
 }
 
-// calculateSingleFileInTarSize calculate the size a file will take up in a tar archive,
+// CalculateTarFileSize calculate the size a file will take up in a tar archive,
 // given the input data. Provided by rounding up to nearest whole block (512)
 // and adding header 512
-func calculateSingleFileInTarSize(in int64) (out int64) {
+func CalculateTarFileSize(in int64) (out int64) {
 	// doing this manually, because math.Round() works with float64
 	out += in
 	if remainder := out % 512; remainder != 0 {

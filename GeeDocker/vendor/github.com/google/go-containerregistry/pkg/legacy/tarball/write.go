@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/legacy"
@@ -57,7 +56,7 @@ func (l *v1Layer) version() []byte {
 func v1LayerID(layer v1.Layer, parentID string, rawConfig []byte) (string, error) {
 	d, err := layer.Digest()
 	if err != nil {
-		return "", fmt.Errorf("unable to get layer digest to generate v1 layer ID: %w", err)
+		return "", fmt.Errorf("unable to get layer digest to generate v1 layer ID: %v", err)
 	}
 	s := fmt.Sprintf("%s %s", d.Hex, parentID)
 	if len(rawConfig) != 0 {
@@ -75,7 +74,7 @@ func newV1Layer(layer v1.Layer, parent *v1Layer, history v1.History) (*v1Layer, 
 	}
 	id, err := v1LayerID(layer, parentID, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate v1 layer ID: %w", err)
+		return nil, fmt.Errorf("unable to generate v1 layer ID: %v", err)
 	}
 	result := &v1Layer{
 		layer: layer,
@@ -104,7 +103,7 @@ func newTopV1Layer(layer v1.Layer, parent *v1Layer, history v1.History, imgConfi
 	}
 	id, err := v1LayerID(layer, result.config.Parent, rawConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate v1 layer ID for top layer: %w", err)
+		return nil, fmt.Errorf("unable to generate v1 layer ID for top layer: %v", err)
 	}
 	result.config.ID = id
 	result.config.Architecture = imgConfig.Architecture
@@ -195,14 +194,12 @@ func MultiWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 	tf := tar.NewWriter(w)
 	defer tf.Close()
 
-	sortedImages, imageToTags := dedupRefToImage(refToImage)
+	imageToTags := dedupRefToImage(refToImage)
 	var m tarball.Manifest
 	repos := make(repositoriesTarDescriptor)
 
 	seenLayerIDs := make(map[string]struct{})
-	for _, img := range sortedImages {
-		tags := imageToTags[img]
-
+	for img, tags := range imageToTags {
 		// Write the config.
 		cfgName, err := img.ConfigName()
 		if err != nil {
@@ -240,7 +237,7 @@ func MultiWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 		var prev *v1Layer
 		for i, l := range layers {
 			if err := updateLayerSources(layerSources, l, img); err != nil {
-				return fmt.Errorf("unable to update image metadata to include undistributable layer source information: %w", err)
+				return fmt.Errorf("unable to update image metadata to include undistributable layer source information: %v", err)
 			}
 			var cur *v1Layer
 			if i < (len(layers) - 1) {
@@ -304,7 +301,6 @@ func MultiWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-
 	if err := writeTarEntry(tf, "manifest.json", bytes.NewReader(mBytes), int64(len(mBytes))); err != nil {
 		return err
 	}
@@ -318,7 +314,7 @@ func MultiWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 	return nil
 }
 
-func dedupRefToImage(refToImage map[name.Reference]v1.Image) ([]v1.Image, map[v1.Image][]string) {
+func dedupRefToImage(refToImage map[name.Reference]v1.Image) map[v1.Image][]string {
 	imageToTags := make(map[v1.Image][]string)
 
 	for ref, img := range refToImage {
@@ -335,26 +331,7 @@ func dedupRefToImage(refToImage map[name.Reference]v1.Image) ([]v1.Image, map[v1
 		}
 	}
 
-	// Force specific order on tags
-	imgs := []v1.Image{}
-	for img, tags := range imageToTags {
-		sort.Strings(tags)
-		imgs = append(imgs, img)
-	}
-
-	sort.Slice(imgs, func(i, j int) bool {
-		cfI, err := imgs[i].ConfigName()
-		if err != nil {
-			return false
-		}
-		cfJ, err := imgs[j].ConfigName()
-		if err != nil {
-			return false
-		}
-		return cfI.Hex < cfJ.Hex
-	})
-
-	return imgs, imageToTags
+	return imageToTags
 }
 
 // Writes a file to the provided writer with a corresponding tar header

@@ -24,10 +24,10 @@ import (
 // Delete deletes the remote reference at src.
 func Delete(src string, opt ...Option) error {
 	o := makeOptions(opt...)
-	ref, err := name.ParseReference(src, o.Name...)
+	ref, err := name.ParseReference(src, o.name...)
 	if err != nil {
-		return fmt.Errorf("parsing reference %q: %w", src, err)
+		return fmt.Errorf("parsing reference %q: %v", src, err)
 	}
 
-	return remote.Delete(ref, o.Remote...)
+	return remote.Delete(ref, o.remote...)
 }

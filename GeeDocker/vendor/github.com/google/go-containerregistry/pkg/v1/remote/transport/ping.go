@@ -15,15 +15,12 @@
 package transport
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
-	authchallenge "github.com/docker/distribution/registry/client/auth/challenge"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
@@ -68,7 +65,7 @@ func parseChallenge(suffix string) map[string]string {
 	return kv
 }
 
-func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingResp, error) {
+func ping(reg name.Registry, t http.RoundTripper) (*pingResp, error) {
 	client := http.Client{Transport: t}
 
 	// This first attempts to use "https" for every request, falling back to http
@@ -79,16 +76,12 @@ func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingRes
 		schemes = append(schemes, "http")
 	}
 
-	var errs []string
+	var connErr error
 	for _, scheme := range schemes {
 		url := fmt.Sprintf("%s://%s/v2/", scheme, reg.Name())
-		req, err := http.NewRequest(http.MethodGet, url, nil)
+		resp, err := client.Get(url)
 		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req.WithContext(ctx))
-		if err != nil {
-			errs = append(errs, err.Error())
+			connErr = err
 			// Potentially retry with http.
 			continue
 		}
@@ -107,41 +100,23 @@ func ping(ctx context.Context, reg name.Registry, t http.RoundTripper) (*pingRes
 				scheme:    scheme,
 			}, nil
 		case http.StatusUnauthorized:
-			if challenges := authchallenge.ResponseChallenges(resp); len(challenges) != 0 {
-				// If we hit more than one, let's try to find one that we know how to handle.
-				wac := pickFromMultipleChallenges(challenges)
+			wac := resp.Header.Get("WWW-Authenticate")
+			if parts := strings.SplitN(wac, " ", 2); len(parts) == 2 {
+				// If there are two parts, then parse the challenge parameters.
 				return &pingResp{
-					challenge:  challenge(wac.Scheme).Canonical(),
-					parameters: wac.Parameters,
+					challenge:  challenge(parts[0]).Canonical(),
+					parameters: parseChallenge(parts[1]),
 					scheme:     scheme,
 				}, nil
 			}
 			// Otherwise, just return the challenge without parameters.
 			return &pingResp{
-				challenge: challenge(resp.Header.Get("WWW-Authenticate")).Canonical(),
+				challenge: challenge(wac).Canonical(),
 				scheme:    scheme,
 			}, nil
 		default:
 			return nil, CheckError(resp, http.StatusOK, http.StatusUnauthorized)
 		}
 	}
-	return nil, errors.New(strings.Join(errs, "; "))
-}
-
-func pickFromMultipleChallenges(challenges []authchallenge.Challenge) authchallenge.Challenge {
-	// It might happen there are multiple www-authenticate headers, e.g. `Negotiate` and `Basic`.
-	// Picking simply the first one could result eventually in `unrecognized challenge` error,
-	// that's why we're looping through the challenges in search for one that can be handled.
-	allowedSchemes := []string{"basic", "bearer"}
-
-	for _, wac := range challenges {
-		currentScheme := strings.ToLower(wac.Scheme)
-		for _, allowed := range allowedSchemes {
-			if allowed == currentScheme {
-				return wac
-			}
-		}
-	}
-
-	return challenges[0]
+	return nil, connErr
 }

@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	defaultTag = "latest"
 	// TODO(dekkagaijin): use the docker/distribution regexes for validation.
 	tagChars = "abcdefghijklmnopqrstuvwxyz0123456789_-.ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	tagDelim = ":"
@@ -46,7 +47,10 @@ func (t Tag) Identifier() string {
 
 // TagStr returns the tag component of the Tag.
 func (t Tag) TagStr() string {
-	return t.tag
+	if t.tag != "" {
+		return t.tag
+	}
+	return defaultTag
 }
 
 // Name returns the name from which the Tag was derived.
@@ -65,7 +69,7 @@ func (t Tag) Scope(action string) string {
 }
 
 func checkTag(name string) error {
-	return checkElement("tag", name, tagChars, 1, 128)
+	return checkElement("tag", name, tagChars, 1, 127)
 }
 
 // NewTag returns a new Tag representing the given name, according to the given strictness.
@@ -90,10 +94,6 @@ func NewTag(name string, opts ...Option) (Tag, error) {
 		if err := checkTag(tag); err != nil {
 			return Tag{}, err
 		}
-	}
-
-	if tag == "" {
-		tag = opt.defaultTag
 	}
 
 	repo, err := NewRepository(base, opts...)

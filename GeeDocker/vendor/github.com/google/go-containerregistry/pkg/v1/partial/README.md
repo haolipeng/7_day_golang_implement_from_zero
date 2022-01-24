@@ -29,7 +29,7 @@ In a tarball, blobs are (often) uncompressed, so it's easiest to implement a `v1
 of uncompressed layers. `tarball.uncompressedImage` does this by implementing `UncompressedImageCore`:
 
 ```go
-type UncompressedImageCore interface {
+type CompressedImageCore interface {
 	RawConfigFile() ([]byte, error)
 	MediaType() (types.MediaType, error)
 	LayerByDiffID(v1.Hash) (UncompressedLayer, error)
@@ -51,7 +51,7 @@ There are some properties of a [`Descriptor`](https://github.com/opencontainers/
 
 For example, in a `tarball.Image`, there is a `LayerSources` field that contains
 an entire layer descriptor with `URLs` information for foreign layers. This
-information can be passed through to callers by implementing this optional
+information can be passed through to callers by implementing this optional 
 `Descriptor` method.
 
 See [`#654`](https://github.com/google/go-containerregistry/pull/654).
@@ -64,19 +64,3 @@ there are cases where it is very helpful to know the layer size, e.g. when
 writing the uncompressed layer into a tarball.
 
 See [`#655`](https://github.com/google/go-containerregistry/pull/655).
-
-### [`partial.Exists`](https://godoc.org/github.com/google/go-containerregistry/pkg/v1/partial#Exists)
-
-We generally don't care about the existence of something as granular as a
-layer, and would rather ensure all the invariants of an image are upheld via
-the `validate` package. However, there are situations where we want to do a
-quick smoke test to ensure that the underlying storage engine hasn't been
-corrupted by something e.g. deleting files or blobs. Thus, we've exposed an
-optional `Exists` method that does an existence check without actually reading
-any bytes.
-
-The `remote` package implements this via `HEAD` requests.
-
-The `layout` package implements this via `os.Stat`.
-
-See [`#838`](https://github.com/google/go-containerregistry/pull/838).
