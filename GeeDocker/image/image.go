@@ -38,12 +38,9 @@ func DownloadImageIfNessary(imageFullName string) error {
 	}
 
 	//2.获取镜像的摘要信息，如sha值
-	image.Manifest()
-	hash, err := image.Digest()
-	if err != nil {
-		return errors.Errorf("image.Digest error: %s", err)
-	}
-	imageHexHash := hash.Hex[:12]
+	m, err := image.Manifest()
+	imageFullHash := m.Config.Digest.Hex
+	imageHexHash := imageFullHash[:12]
 
 	err = downloadImage(image, imageFullName, imageHexHash)
 	if err != nil {
@@ -55,6 +52,10 @@ func DownloadImageIfNessary(imageFullName string) error {
 	untarFile(imageHexHash)
 
 	//4.process tarball layers
+	err = ProcessLayers(imageHexHash, imageFullHash)
+	if err != nil {
+		fmt.Println("ProcessLayers failed", err)
+	}
 
 	return err
 }
@@ -98,7 +99,7 @@ func untarFile(imageHexHash string) {
 }
 
 //ProcessLayers process multiple layers of container images
-func ProcessLayers(imageHexHash string) error {
+func ProcessLayers(imageHexHash, imageFullHash string) error {
 	var (
 		err          error
 		content      []byte
@@ -144,6 +145,13 @@ func ProcessLayers(imageHexHash string) error {
 
 	//4.copy manifest.json和{fullImageHex}.json file to /var/lib/gocker/images/{image-hash}/ directory
 	//copyFile
+	manifestDstPath := filepath.Join(common.GetGockerImagePath(), imageHexHash, "manifest.json")
 
+	configName := fmt.Sprintf("%s.json", imageFullHash)
+	configPath := filepath.Join(common.GetGockerTempPath(), imageHexHash, configName)
+	configDstPath := filepath.Join(common.GetGockerImagePath(), imageHexHash, configName)
+
+	common.CopyFile(manifestPath, manifestDstPath)
+	common.CopyFile(configPath, configDstPath)
 	return err
 }
