@@ -13,6 +13,8 @@ import (
 
 //Untar 将tar格式的镜像压缩包，解压到指定的目录下
 func Untar(tarball string, dstPath string) error {
+	hardLinks := make(map[string]string)
+
 	//1.打开文件
 	file, err := os.Open(tarball)
 	if err != nil {
@@ -41,7 +43,7 @@ func Untar(tarball string, dstPath string) error {
 		}
 
 		fileInfo := header.FileInfo()
-		dstFilePath := dstPath + header.Name //dstFilePath can be file path or directory path
+		dstFilePath := filepath.Join(dstPath, header.Name) //dstFilePath can be file path or directory path
 
 		//pax_global_header is git file
 		if header.Name == "pax_global_header" {
@@ -57,11 +59,24 @@ func Untar(tarball string, dstPath string) error {
 				log.Println("os.MkdirAll error", err)
 			}
 
-			log.Println("tar.TypeDir")
+			//log.Println("tar.TypeDir")
 		case tar.TypeReg: //常规文件
 			untarFile(reader, header, dstFilePath)
 
-			log.Println("tar.TypeReg")
+			//log.Println("tar.TypeReg")
+		case tar.TypeLink:
+			//store details of hard links,process it finally
+			linkPath := filepath.Join(dstPath, header.Linkname)
+			linkPath2 := filepath.Join(dstPath, header.Name)
+			hardLinks[linkPath2] = linkPath
+
+			log.Println("tar.TypeLink")
+		case tar.TypeSymlink:
+			err = os.Symlink(header.Linkname, dstFilePath)
+			if os.IsExist(err) {
+				continue
+			}
+			log.Println("tar.TypeSymlink")
 		}
 		//output header.Name to see see
 		log.Printf("name:%s\n", header.Name)

@@ -2,7 +2,7 @@ package common
 
 //vars for linux only, not support windows and mac
 const (
-	GockerImagePath     = "var/lib/gocker/image/"
+	GockerImagePath     = "/var/lib/gocker/image/"
 	GockerTempPath      = "/var/lib/gocker/tmp/"
 	GockerContainerPath = "/var/run/gocker/containers/"
 )

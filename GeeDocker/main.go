@@ -7,6 +7,6 @@ import (
 
 func main() {
 	//测试下载文件是否成功
-	//image.DownloadImageIfNessary("alpine:v1")
-	image.DownloadImageIfNessary(strings.Join([]string{"ubuntu", "latest"}, ":"))
+	image.DownloadImageIfNessary(strings.Join([]string{"alpine", "latest"}, ":"))
+	//image.DownloadImageIfNessary(strings.Join([]string{"ubuntu", "latest"}, ":"))
 }
