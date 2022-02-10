@@ -1,10 +1,12 @@
+ 
+
 在实现代码的过程中，我们是在解决一个个的问题。
 
 将镜像中的分层内容解析到一个文件夹下。
 
 docker镜像的基础知识
 
-manifest： 基本上对应了一个镜像，里面包含了一个镜像的所有layers digest，客户端拉取镜像的时候一般都是先获取manifest 文件，在根据 manifest 文件里面的内容拉取镜像各个层(tar+gzip)
+manifest： 基本上对应了一个镜像，里面包含了一个镜像的所有layers digest值，客户端拉取镜像的时候一般都是先获取manifest 文件，再根据 manifest 文件里面的内容拉取镜像各个层(tar+gzip)
 
 
 
@@ -12,9 +14,21 @@ layer：镜像层，镜像层不包含任何的运行时信息，只包含文件
 
 
 
-计算机领域中最牛逼的是
+实现docker，想清楚要分几步走，将问题划分为子问题来逐一。
 
-实现docker，我们要分几步走，将问题划分为子问题。
+
+
+overlayfs属于UnionFS，即联合文件系统。
+
+在当前主机上，能进行overlayfs
+
+
+
+unix.Mount() 函数提供了挂载的能力
+
+https://pkg.go.dev/golang.org/x/sys/unix#section-readme
+
+在技术分享时，提供个example例子来讲解下unix.Mount以及unix.UnMount两个函数的简单实用。
 
 
 
@@ -22,11 +36,16 @@ layer：镜像层，镜像层不包含任何的运行时信息，只包含文件
 
 ## 3、1 下载镜像
 
-下载镜像是分为以下5个步骤的：
+- 下载镜像是分为以下5个步骤的：
+- 下载镜像并存盘至tmp临时目录
+- 解压tar格式镜像
+- 处理镜像的layer分层
+- 解析manifest信息，计算出哈希值
+- 删除临时存储目录
 
 
 
-### 1、下载镜像并存盘至目录
+### 1、下载镜像并存盘至tmp临时目录（已完成）
 
 镜像名称的命名：
 
@@ -48,43 +67,6 @@ image的manifest的哈希值，取前12位。
 
 
 
-images.json文件是我们自己维护？还是docker的镜像中本来就有这部分的信息。
-
-所有images镜像的信息，存储在images.json文件中
-
-/var/lib/gocker/images/images.json
-
-```json
-{
-	"ubuntu" : {
-					"18.04": "[image-hash]",
-					"18.10": "[image-hash]",
-					"19.04": "[image-hash]",
-					"19.10": "[image-hash]"
-				},
-	"centos" : {
-					"6.0": "[image-hash]",
-					"6.1": "[image-hash]",
-					"6.2": "[image-hash]",
-					"7.0": "[image-hash]"
-				}
-}
-```
-
-存储当前系统上的镜像信息的文件格式如上所示。
-
-image-hash是镜像的哈希值。
-
-
-
-采用什么数据结构来存储不同镜像的不同标签tag版本呢？
-
-map[string] map[string] string
-
-确定采用双层map的方式来存储镜像的信息，然后将数据json序列化后，写入images.json文件中。
-
-
-
 TODO:编写demo验证功能（已完成）
 
 crane.Pull和crane.SaveLegacy函数
@@ -94,6 +76,12 @@ crane.Pull和crane.SaveLegacy函数
 
 
 ### 2、解压tar格式镜像
+
+fp := filepath.Join(destPath, sanitize(hdr.Name))
+
+这句是什么意思
+
+
 
 解压tar压缩包到指定目录下
 
@@ -127,10 +115,9 @@ https://github.com/mholt/archiver
 
 ### 3、处理镜像的layer分层
 
-- 从指定镜像的manifest.json中解析出镜像的layer分层，/var/lib/gocker/tmp/c059bfaa849c/manifest.json
-- 解压layer层文件，这是容器的rootfs基础，解压目录为/var/lib/gocker/images/{image-hash}/
-- 由于一个镜像会有多个layer层文件，所以存储目录路径不仅要有镜像的hash值，也要有layer的hash值，/var/lib/gocker/images/{image-hash}/{layer-hash}/fs，{layer-hash}取其layer哈希值的前12位
-- 将manifest.json和fullImageHex.json都拷贝到/var/lib/gocker/images/{image-hash}/下面，供以后使用
+- 从指定镜像的manifest.json中解析出镜像的layer分层，manifest.json文件路径为/var/lib/gocker/tmp/c059bfaa849c/manifest.json
+- 解压layer层文件，由于一个镜像可能存在多个layer文件，所以存储目录路径不仅要有镜像的hash值，也要有layer的hash值，解压路径定为：/var/lib/gocker/images/{image-hash}/{layer-hash}/fs，{layer-hash}取其layer哈希完整值的前12位
+- 将manifest.json和{fullImageHex}.json都拷贝到/var/lib/gocker/images/{image-hash}/下面，供以后使用，{fullImageHex}加上大括号表明是镜像的完整hex值。
 
 
 
@@ -138,17 +125,48 @@ https://github.com/mholt/archiver
 
 从image镜像中解析出manifest信息。
 
-这个好弄。
+manifest.json中的数据都是json格式，定义好json数据后，进行json反序列化即可。
 
 
 
-5、更新images信息
+### 5、images镜像信息的维护和更新
 
-将新下载成功的image添加到/var/lib/gocker/images/images.json
+images.json文件是我们自己维护？还是docker的镜像中本来就有这部分的信息。
+
+所有images镜像的信息，存储在images.json文件中
+
+/var/lib/gocker/images/images.json
+
+```json
+{
+	"ubuntu" : {
+					"18.04": "[image-hash]",
+					"18.10": "[image-hash]",
+					"19.04": "[image-hash]",
+					"19.10": "[image-hash]"
+				},
+	"centos" : {
+					"6.0": "[image-hash]",
+					"6.1": "[image-hash]",
+					"6.2": "[image-hash]",
+					"7.0": "[image-hash]"
+				}
+}
+```
+
+存储当前系统上的镜像信息的文件格式如上所示。
 
 
 
-### 5、删除临时存储目录
+采用什么数据结构来存储不同镜像的不同标签tag版本呢？
+
+map[string] map[string] string
+
+确定采用双层map的方式来存储镜像的信息，然后将map数据json序列化后，写入images.json文件中持久化保存。
+
+
+
+### 6、删除临时存储目录
 
 使用os.RemoveAll函数
 
