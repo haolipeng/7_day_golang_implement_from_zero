@@ -1,4 +1,4 @@
-module 7_day_golang_implement_from_zero/GeeDocker
+module GeeDocker
 
 go 1.17
 

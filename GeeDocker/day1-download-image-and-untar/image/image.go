@@ -1,7 +1,7 @@
 package image
 
 import (
-	"7_day_golang_implement_from_zero/GeeDocker/common"
+	"GeeDocker/common"
 	"encoding/json"
 	"fmt"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -20,13 +20,14 @@ type ManiFest struct {
 }
 
 func DownloadImageIfNessary(imageFullName string) error {
-	//TODO:判断镜像在本地是否存在，不存在则下载
+	//TODO:判断镜像在本地是否存在，不存在则下载，存在则直接返回镜像的哈希值
 	//such as "alpine:latest" parse to "alpine" and "latest"
 	var (
 		image v1.Image
 		err   error
 	)
 
+	//0.校验参数
 	if imageFullName == "" {
 		return errors.New("download image error,src can't empty!")
 	}
@@ -66,7 +67,7 @@ func downloadImage(image v1.Image, src, imageHash string) error {
 		err error
 	)
 
-	//3.构造存储到本地的路径
+	//1.构造镜像存储路径，并确保路径存在，默认存储路径为"/var/lib/gocker/tmp/{imageHash}"
 	imageStorageDir := common.GockerTempPath + imageHash
 	err = os.MkdirAll(imageStorageDir, 0755)
 	if err != nil {
@@ -74,7 +75,7 @@ func downloadImage(image v1.Image, src, imageHash string) error {
 	}
 	imagePath := imageStorageDir + "/package.tar"
 
-	//3.保存镜像到本地路径，先保存到tmp目录
+	//2.保存镜像到本地路径,SaveLegacy保存的镜像格式为tarball
 	err = crane.SaveLegacy(image, src, imagePath)
 	if err != nil {
 		return errors.Errorf("crane.SaveLegacy error: %s", err)
