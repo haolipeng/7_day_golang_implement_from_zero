@@ -1,8 +1,14 @@
 package image
 
-import "testing"
+import (
+	"log"
+	"strings"
+	"testing"
+)
 
 func TestProcessLayers(t *testing.T) {
-	imageHexHash := "e7d88de73db3"
-	ProcessLayers(imageHexHash, imageHexHash)
+	err := DownloadImageIfNessary(strings.Join([]string{"alpine", "latest"}, ":"))
+	if err != nil {
+		log.Println("DownloadImageIfNessary error")
+	}
 }

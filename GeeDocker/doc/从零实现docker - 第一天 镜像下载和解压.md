@@ -10,26 +10,50 @@
 
 ```json
                            是
-拉取 镜像 --> 检查是否已缓存 -----> 返回镜像哈希值 ⑴
+镜像 下载 --> 检查是否已缓存 -----> 返回镜像哈希值 ⑴
                 |  否             ok           
                 |--> 拉取镜像到本地 --> 解压tar格式镜像 --> 处理镜像多层数据 --> 镜像元数据持久化  ⑵
 ```
 
 本篇文章实现的是流程（2）中的“拉取镜像到本地”和“解压tar格式镜像”这两个步骤。
 
-# 一、镜像拉取
+# 一、镜像下载
 
 虽然docker 官网提供了访问dockerHub仓库的API， https://docs.docker.com/registry/spec/api/，但是用开源库来进行镜像包的下载更方便一些，帮忙处理好很多兼容性问题。
 
 gdocker采用的镜像交互库是go-containerregistry，项目地址：https://github.com/google/go-containerregistry
 
-先写个镜像下载的demo来演示下go-containerregistry的crane接口
+
+
+## 1、1 拉取镜像
+
+这里我最关心的是下载镜像功能，也就是go-containerregistry库中crane pull命令以及其对应的api。
+
+```text
+func Pull(src string, opt ...Option) (v1.Image, error)
+```
+
+Pull 函数功能：返回 src 标识的远程镜像的 v1.Image。
+
+镜像全称 = 镜像名称 + tag名称 ，如alpine:latest。
 
 
 
-crane.Pull
+## 1、2 计算镜像哈希值
 
-计算hash值
+```
+// Image defines the interface for interacting with an OCI v1 image.
+//go:generate counterfeiter -o fake/image.go . Image
+type Image interface {
+
+	// Manifest returns this image's Manifest object.
+	Manifest() (*Manifest, error)
+}
+```
+
+Image接口的Manifest()返回Manifest类型的指针。
+
+
 
 ```
 // Manifest represents the OCI image manifest in a structured way.
@@ -42,28 +66,6 @@ type Manifest struct {
 }
 ```
 
-
-
-crane.SaveLegacy
-
-镜像的临时存储目录
-
-
-
-镜像名称的命名：
-
-alpine:latest，通过解析字符串可以获得镜像名称和镜像标签tag。
-
-
-
-下载的镜像存储到临时目录/var/lib/gocker/tmp/
-
-举例说明：
-
-image 镜像临时存储路径:/var/lib/gocker/tmp/c059bfaa849c/package.tar
-
-
-
 c059bfaa849c是标识镜像唯一性的hash值，是如何计算出来的呢？
 
 image的manifest的哈希值，取前12位。
@@ -72,15 +74,31 @@ image的manifest的哈希值，取前12位。
 
 
 
-TODO:编写demo验证功能（已完成）
+## 1、3 保存镜像到本地
 
-crane.Pull和crane.SaveLegacy函数
+保存镜像到本地的函数是SaveLegacy
 
-下载镜像这块需要写个小demo来演示下。
+```text
+func SaveLegacy(img v1.Image, src, path string) error
+```
 
-并且保证代码的提交格式，今日的代码是基于昨天代码的基础上。
+SaveLegacy 将 v1.Image类型的img写为旧版 tarball压缩包。
+
+path：镜像的存储路径，代码中其默认存储路径为"/var/lib/gocker/tmp/{imageHash}/packaget.tar"
 
 
+
+下载的镜像存储到临时目录/var/lib/gocker/tmp/，举例说明：
+
+哈希值为c059bfaa849c的image 镜像的临时存储路径是/var/lib/gocker/tmp/c059bfaa849c/package.tar
+
+
+
+
+
+## 1、4 完整代码
+
+其完成代码如下所示：
 
 ```go
 func DownloadImageIfNessary(imageFullName string) error {
@@ -142,14 +160,6 @@ func downloadImage(image v1.Image, src, imageHash string) error {
 
 # 二、解压tar格式镜像
 
-### 2、解压tar格式镜像
-
-fp := filepath.Join(destPath, sanitize(hdr.Name))
-
-这句是什么意思
-
-
-
 解压tar压缩包到指定目录下
 
 image 镜像存储路径
@@ -168,17 +178,11 @@ TODO:编写demo验证功能（提供tar格式镜像前提下，解压）
 
 
 
-采用的第三方tar解压缩包如下：
-
-https://github.com/mholt/archiver
+三、
 
 
 
-使用goland进行远程build时，
-
-/usr/local/go/bin/go build -o /home/work/7_day_golang_implement_from_zero/H0Jahh6npq/go_build_7_day_golang_implement_from_zero_linux -gcflags all=-N -l 7_day_golang_implement_from_zero
-
-
+///////////////////////////////////////////////以下内容留着下次弄////////////////////////////////////////////////
 
 # 三、处理镜像多层Layer数据
 

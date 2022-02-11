@@ -1,4 +1,4 @@
-module day1-download-image-and-untar
+module day2-process-images-layers
 
 go 1.17
 
