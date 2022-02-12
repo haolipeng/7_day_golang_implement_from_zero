@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestProcessLayers(t *testing.T) {
+func TestDownloadImageIfNessary(t *testing.T) {
 	err := DownloadImageIfNessary(strings.Join([]string{"alpine", "latest"}, ":"))
 	if err != nil {
 		log.Println("DownloadImageIfNessary error")

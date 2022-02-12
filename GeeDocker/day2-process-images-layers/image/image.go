@@ -2,15 +2,11 @@ package image
 
 import (
 	"day2-process-images-layers/common"
-	"encoding/json"
-	"fmt"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 )
 
 type ManiFest struct {
@@ -38,7 +34,7 @@ func DownloadImageIfNessary(imageFullName string) error {
 		return errors.Errorf("crane.Pull error: %s", err)
 	}
 
-	//2.获取镜像的摘要信息，如sha值
+	//2.获取镜像的哈希值(manifest hex值的前12位)
 	m, err := image.Manifest()
 	imageFullHash := m.Config.Digest.Hex
 	imageHexHash := imageFullHash[:12]
@@ -51,12 +47,6 @@ func DownloadImageIfNessary(imageFullName string) error {
 
 	//3.decompress tar archive file
 	untarFile(imageHexHash)
-
-	//4.process tarball layers
-	err = ProcessLayers(imageHexHash, imageFullHash)
-	if err != nil {
-		fmt.Println("ProcessLayers failed", err)
-	}
 
 	return err
 }
@@ -97,62 +87,4 @@ func untarFile(imageHexHash string) {
 		log.Println(err)
 		return
 	}
-}
-
-//ProcessLayers process multiple layers of container images
-func ProcessLayers(imageHexHash, imageFullHash string) error {
-	var (
-		err          error
-		content      []byte
-		manifestPath string
-		mf           []ManiFest
-	)
-
-	//1.locate manifest.json path and parser json content to object
-	manifestPath = filepath.Join(common.GetGockerTempPath(), imageHexHash, "manifest.json")
-	content, err = ioutil.ReadFile(manifestPath)
-	if err != nil || len(content) == 0 {
-		return err
-	}
-
-	//2.layers info in manifest.json file
-	err = json.Unmarshal(content, &mf)
-	if err != nil {
-		return err
-	}
-
-	//3.judge manifest info,such as multiple manifest or layer is empty
-	if len(mf) == 0 {
-		return errors.New("can't handle empty manifest!")
-	}
-
-	//3.untar the layer.tar archive file
-	for i, layer := range mf[0].Layers {
-		fmt.Printf("Layer %d:%s\n", i, layer)
-
-		layerTarballPath := filepath.Join(common.GetGockerTempPath(), imageHexHash, layer)
-		dstPath := filepath.Join(common.GetGockerImagePath(), imageHexHash, layer[:12], "fs")
-		err = os.MkdirAll(dstPath, 0644)
-		if err != nil {
-			fmt.Printf("os.MkdirAll %s failed!", dstPath)
-		}
-
-		//real untar
-		err = common.Untar(layerTarballPath, dstPath)
-		if err != nil {
-			break
-		}
-	}
-
-	//4.copy manifest.json和{fullImageHex}.json file to /var/lib/gocker/images/{image-hash}/ directory
-	//copyFile
-	manifestDstPath := filepath.Join(common.GetGockerImagePath(), imageHexHash, "manifest.json")
-
-	configName := fmt.Sprintf("%s.json", imageFullHash)
-	configPath := filepath.Join(common.GetGockerTempPath(), imageHexHash, configName)
-	configDstPath := filepath.Join(common.GetGockerImagePath(), imageHexHash, configName)
-
-	common.CopyFile(manifestPath, manifestDstPath)
-	common.CopyFile(configPath, configDstPath)
-	return err
 }
