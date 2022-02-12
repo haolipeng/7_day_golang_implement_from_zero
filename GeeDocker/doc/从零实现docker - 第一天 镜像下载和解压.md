@@ -1,8 +1,8 @@
-**本文是7天从零实现docker的第一篇。**
+**本文是7天从零实现docker的第一篇 镜像下载和解压**
 
 - 介绍如何用go-containerregistry三方库进行镜像下载，代码量约60行
-- 了解镜像tarball包内容及格式
-- 解压镜像tarball包的代码
+- 了解镜像tar包内容及格式
+- 解压镜像tar包的代码
 
 
 
@@ -19,13 +19,13 @@
 
 # 一、镜像下载
 
-虽然docker 官网提供了访问dockerHub仓库的API， https://docs.docker.com/registry/spec/api/，但是用开源库来进行镜像包的下载更方便一些，帮忙处理好很多兼容性问题。
-
-gdocker采用的镜像交互库是go-containerregistry，项目地址：https://github.com/google/go-containerregistry
+GeeDocker采用的镜像交互第三方库是go-containerregistry，项目地址：https://github.com/google/go-containerregistry
 
 
 
-## 1、1 拉取镜像
+## 1、1 熟悉go-containerregistry中镜像拉取api函数
+
+### 1） 从远程仓库拉取镜像
 
 这里我最关心的是下载镜像功能，也就是go-containerregistry库中crane pull命令以及其对应的api。
 
@@ -35,14 +35,26 @@ func Pull(src string, opt ...Option) (v1.Image, error)
 
 Pull 函数功能：返回 src 标识的远程镜像的 v1.Image。
 
-镜像全称 = 镜像名称 + tag名称 ，如alpine:latest。
+**参数src**：待拉取的镜像全称，镜像全称 = 镜像名 + tag名称 ，如alpine:latest，alpine是镜像名，latest是tag标签
 
+**参数opt**：拉取操作的可选项，主要有WithTransport和Insecure两种
 
+```go
+func WithTransport(t http.RoundTripper) Option
+```
 
-## 1、2 计算镜像哈希值
+WithTransport 是一个可选项，用于覆盖远程操作的默认传输。
 
 ```
-// Image defines the interface for interacting with an OCI v1 image.
+func Insecure(o *Options)
+```
+
+Insecure 是一个可选项，它允许在没有 TLS 的情况下获取镜像引用。
+
+### 2） 计算镜像哈希值
+
+```
+// Image 定义了与v1版本的OCI镜像交互的接口。
 //go:generate counterfeiter -o fake/image.go . Image
 type Image interface {
 
@@ -53,7 +65,7 @@ type Image interface {
 
 Image接口的Manifest()返回Manifest类型的指针。
 
-
+我们来看一下Manifest结构体：
 
 ```
 // Manifest represents the OCI image manifest in a structured way.
@@ -74,7 +86,7 @@ image的manifest的哈希值，取前12位。
 
 
 
-## 1、3 保存镜像到本地
+### 3） 保存镜像到本地
 
 保存镜像到本地的函数是SaveLegacy
 
@@ -82,23 +94,37 @@ image的manifest的哈希值，取前12位。
 func SaveLegacy(img v1.Image, src, path string) error
 ```
 
-SaveLegacy 将 v1.Image类型的img写为旧版 tarball压缩包。
+**函数功能**：SaveLegacy 将 v1.Image类型的img写为 linux tar类型压缩包。
 
-path：镜像的存储路径，代码中其默认存储路径为"/var/lib/gocker/tmp/{imageHash}/packaget.tar"
+**img参数**：Pull()函数返回的v1.Image对象
 
+**src参数**: 镜像的全路径，如alpine:latest。
 
-
-下载的镜像存储到临时目录/var/lib/gocker/tmp/，举例说明：
-
-哈希值为c059bfaa849c的image 镜像的临时存储路径是/var/lib/gocker/tmp/c059bfaa849c/package.tar
+**path参数**：镜像的存储路径
 
 
 
+弄懂其实现原理后，下面我们开始写代码，这里推荐一种
+
+## 1、2 Go语言实现
+
+代码的目录结构如下：
+
+![image-20220212120824534](picture/image-20220212120824534.png)
 
 
-## 1、4 完整代码
 
-其完成代码如下所示：
+ day1-download-image-and-untar 目录下新建 package `image`和image.go文件，将镜像操作相关代码放在image.go文件中。
+
+day1-download-image-and-untar 目录下新建 package `common`，在common目录下新建tar.go和vars.go文件，tar解压缩的操作代码放在tar.go文件中，项目涉及的全局变量放在vars.go中。
+
+[GeeDocker/day1-download-image-and-untar/image/image.go]: https://github.com/haolipeng/7_day_golang_implement_from_zero/blob/master/GeeDocker/day1-download-image-and-untar/image/image.go
+
+
+
+祛除空格后，代码量约为50行，比较少。
+
+编写函数DownloadImageIfNessary
 
 ```go
 func DownloadImageIfNessary(imageFullName string) error {
@@ -120,11 +146,12 @@ func DownloadImageIfNessary(imageFullName string) error {
       return errors.Errorf("crane.Pull error: %s", err)
    }
 
-   //2.获取镜像的摘要信息，如sha值
+    //2.获取镜像的哈希值(manifest hex值的前12位)
    m, err := image.Manifest()
    imageFullHash := m.Config.Digest.Hex
    imageHexHash := imageFullHash[:12]
 
+   //3.下载镜像并存储到本地
    err = downloadImage(image, imageFullName, imageHexHash)
    if err != nil {
       log.Println("downloadImage error:", err)
@@ -146,7 +173,7 @@ func downloadImage(image v1.Image, src, imageHash string) error {
 	}
 	imagePath := imageStorageDir + "/package.tar"
 
-	//2.保存镜像到本地路径,SaveLegacy保存的镜像格式为tarball
+	//2.保存镜像到本地路径,SaveLegacy保存的镜像格式为tar
 	err = crane.SaveLegacy(image, src, imagePath)
 	if err != nil {
 		return errors.Errorf("crane.SaveLegacy error: %s", err)
@@ -156,29 +183,70 @@ func downloadImage(image v1.Image, src, imageHash string) error {
 }
 ```
 
+流程可分为四步
+
+**第一步**：从远程仓库拉取镜像，将镜像全名(imageFullName)作为函数参数调用crane.Pull()函数
+
+**第二步**：取镜像的manifest值中Hex值的前12位，作为哈希值。
+
+**第三步**：镜像存储路径的创建
+
+1、在day1-download-image-and-untar 目录下新建package `common`，在common包添加GockerTempPath变量，其值为/var/lib/gocker/tmp/）
+
+```go
+package common
+
+//vars for linux only, not support windows and mac
+const (
+	GockerTempPath      = "/var/lib/gocker/tmp/"        //下载镜像临时存储目录
+)
+```
+
+imagePath镜像临时存储路径为"/var/lib/gocker/tmp/{imageHash}/packaget.tar"，其中imageHash是镜像的哈希值（之前计算过），标识这是某个镜像的数据。
+
+比如哈希值为c059bfaa849c的image 镜像，其临时存储路径是/var/lib/gocker/tmp/c059bfaa849c/package.tar
+
+
+
+第四步：调用SaveLegacy()函数保存镜像数据到本地，函数成功则能在镜像存储路径上找到package.tar包。
+
 
 
 # 二、解压tar格式镜像
 
-解压tar压缩包到指定目录下
+经过第一步后，哈希值为c059bfaa849c的 镜像包package.tar已下载到/var/lib/gocker/tmp/c059bfaa849c/package.tar
 
-image 镜像存储路径
+下一步，将/var/lib/gocker/tmp/c059bfaa849c/package.tar包解压到当前路径下。
 
-/var/lib/gocker/tmp/c059bfaa849c/package.tar
+下面开始编写tar解压函数，在package `common`的tar.go中编写如下代码：
 
-将其在当前路径进行解压
+```go
 
-即解压package.tar文件中的文件和文件夹到当前目录
+```
+
+主要是func Untar(tarball string, dstPath string)函数的编写，
+
+tarball参数：tar源文件路径
+
+dstPath参数：解压路径
+
+**其逻辑思路如下：**
+
+**第一步**：os.Open打开tar压缩包文件，并使用bufio来提升读写性能
+
+**第二步**：读取文件中的每一行内容，并根据header.Typeflag对内容类型进行判断，分常见文件、文件夹、符号链接、硬链接四种情况来处理：
+
+文件：
+
+文件夹：
+
+符号链接：
+
+硬链接：
 
 
 
-解压tar格式的镜像
-
-TODO:编写demo验证功能（提供tar格式镜像前提下，解压）
-
-
-
-三、
+**第三步**：代码收尾处，统一处理硬链接
 
 
 
@@ -254,8 +322,6 @@ map[string] map[string] string
 
 
 2、探究镜像包格式
-
-我保存的文件名称是package.tar，注意此tarball是采用
 
 镜像格式规范
 

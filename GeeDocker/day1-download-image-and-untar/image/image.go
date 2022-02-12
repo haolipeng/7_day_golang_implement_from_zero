@@ -34,7 +34,7 @@ func DownloadImageIfNessary(imageFullName string) error {
 		return errors.Errorf("crane.Pull error: %s", err)
 	}
 
-	//2.获取镜像的摘要信息，如sha值
+	//2.获取镜像的哈希值(manifest hex值的前12位)
 	m, err := image.Manifest()
 	imageFullHash := m.Config.Digest.Hex
 	imageHexHash := imageFullHash[:12]

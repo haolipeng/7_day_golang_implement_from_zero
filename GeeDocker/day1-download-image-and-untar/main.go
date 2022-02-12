@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GeeDocker/image"
+	"day1-download-image-and-untar/image"
 	"strings"
 )
 
