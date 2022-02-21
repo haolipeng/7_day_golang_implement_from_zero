@@ -1,52 +1,95 @@
 # 一、Overlayfs介绍
 
-## 二、Overlayfs实战
+联合文件系统，可让你使用2个目录挂载文件系统：
+
+“下层”目录和“上层”目录
+
+基本上：
+
+◈ 文件系统的**下层**目录是只读的
+
+◈ 文件系统的**上层**目录可以读写
+
+
+
+进程读写overlayfs文件规则：
+
+1、**当进程“读取”文件时**，overlayfs文件系统驱动将优先在上层目录upperdir中查找并从该目录中读取文件，找不到则在下层目录lowerdir中查找。
+
+2、**当进程"写入"文件时**，overlayfs会将其写入上层目录upperdir。
+
+
+
+# 二、Overlayfs简单实战
+
+## 2、1 加载overlayfs模块
 
 查看内核是否加载了overlay
 
+```shell
 lsmod | grep overlay
+```
 
 
 
 如果没加载，则采用如下命令加载：
 
+```shell
 modprobe overlay
+```
+
+已加载的过overlay模块的如下图所示：
+
+![image-20220221214907689](picture/image-20220221214907689.png)
 
 
 
-可以看到merged文件夹中展示的文件是low和upper里面的文件集合。
+## 2、2 挂载overlayfs文件系统
+
+找一个你喜欢的目录，哈哈，执行如下命令来创建目录和文件
+
+```shell
+mkdir upper lower merged work
+echo "I'm from lower!" > lower/in_lower.txt
+echo "I'm from upper!" > upper/in_upper.txt
+# `in_both` is in both directories
+echo "I'm from lower!" > lower/in_both.txt
+echo "I'm from upper!" > upper/in_both.txt
+```
+
+创建文件和目录如下
+
+![image-20220221221234630](picture/image-20220221221234630.png)
 
 
 
-同名覆盖测试
+合并上层目录和下层目录非常容易：我们可以通过 `mount` 来完成！
 
-root@qa-control-pub-ci-build1:~/cxqdir/merged# vim 11.txt  
+```
+mount -t overlay overlay -o lowerdir=./lower/,upperdir=./upper/,workdir=./work/ ./merged/
+```
 
-root@qa-control-pub-ci-build1:~/cxqdir/merged# cat 11.txt  333333333
+**lowerdir参数**：下层目录
 
-分别查看low和upper目录下文件，发现low下面的同名文件内的内容没有变，而upper里面多了一个同名文件。 
+可以挂载多个下层目录，多个目录之间采用分号分隔。
 
-root@qa-control-pub-ci-build1:~/cxqdir/merged# cat ../low/11.txt1111111111111111111111
-
-root@qa-control-pub-ci-build1:~/cxqdir/merged# cat ../upper/11.txt333333333
-
-值得注意的是upper中新增的11.txt文件和merge中的文件node是一样的。
-
- root@qa-control-pub-ci-build1:~/cxqdir/merged# ls -i ../upper/11.txt350031 ../upper/11.txt 
-
-root@qa-control-pub-ci-build1:~/cxqdir/merged# ls -i 11.txt350031 11.txt 
-
-但是跟底层low内的同名文件node不一样 
-
-root@qa-control-pub-ci-build1:~/cxqdir/merged# ls -i ../low/11.txt  350033 ../low/11.txt
+```
+mount -t overlay overlay -o lowerdir:/dir1:/dir2:/dir3:...:/dir25,upperdir=...
+```
 
 
 
-# 三、使用overlayfs搭建个镜像
+**upperdir参数**：上层目录
 
-How to Mount and Unmount File Systems in Linux
 
-https://linuxize.com/post/how-to-mount-and-unmount-file-systems-in-linux/
+
+## 2、3 合并后的目录结构
+
+![image-20220221221754038](picture/image-20220221221754038.png)
+
+上图可以看到merged文件夹中展示的文件是low和upper里面的文件集合，并且合并后merged/in_both.txt文件时upper/in_both.txt文件，这也符合上面的原则。
+
+
 
 
 

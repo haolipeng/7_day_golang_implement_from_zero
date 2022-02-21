@@ -10,13 +10,13 @@ layer：镜像层，镜像层不包含任何的运行时信息，只包含文件
 
 
 
-overlayfs文件系统挂载使用
-
 unix.Mount() 函数提供了挂载的能力
 
 https://pkg.go.dev/golang.org/x/sys/unix#section-readme
 
 在技术分享时，提供个example例子来讲解下unix.Mount以及unix.UnMount两个函数的简单实用。
+
+在开头会讲解overlayfs的
 
 
 
@@ -29,33 +29,6 @@ https://pkg.go.dev/golang.org/x/sys/unix#section-readme
 ## 3、3 删除本地镜像
 
 
-
-镜像的操作库采用go-containerregistry，是google开源的一个项目，我们这里只用到crane相关的api接口即可。
-
-
-
-/var/lib/gocker/images/c059bfaa849c/47d7af55c64c/fs
-
-其中c059bfaa849c和47d7af55c64c这两个值分别代表什么？
-
-
-
-layer.tar文件是个简单的文件系统的集合，我们需要把解压后的文件夹放到什么地方呢？
-
-
-
-这几个目录都是干什么的，今天必须搞情况，现在也搞的差不多了。
-
-image hash value is manifest [:12] bits
-imageShaHex = manifest.Config.Digest.Hex[:12]
-
-different layers file dst path
-/var/lib/gocker/images/c059bfaa849c/47d7af55c64c/fs 
-
-/var/lib/gocker/images/images.json
-
-create gocker container path
-/var/run/gocker/containers/e910dffe0e1a
 
 
 
@@ -115,26 +88,4 @@ lsns命令的输出结果
 
 
 
-
-
-
-资料收集
-
-# Building container images in Go
-
-https://ahmet.im/blog/building-container-images-in-go/
-
-
-
-使用到的开源库
-
-https://github.com/google/go-containerregistry
-
-
-
-https://www.51cto.com/article/697935.html
-
-
-
-# 详解 OCI 容器镜像的层
 

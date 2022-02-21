@@ -1,3 +1,25 @@
+# 零、写作的初衷
+
+对于技术人员来说，造轮子是提升自己编程能力的最佳途径，费曼学习法中有一句话，What i can't create,I do not understand. --- 费曼，即不是我创造的，我没法理解。
+
+前置要求：
+
+1、安装过docker软件
+
+2、docker常规操作，如docker image ls，docker ps，docker pull,docker run，docker exec等常规操作
+
+3、有一定的linux的基础，熟悉常用的命令，比如cp，mkdir，ls命令等。
+
+
+
+对于docker不熟悉的的小伙伴可参考书籍《Docker——从入门到实践》进行补充技术知识，然后再回头来学习，祝各位小伙伴在奋斗的路上一直前行。
+
+https://yeasy.gitbook.io/docker_practice/
+
+
+
+
+
 # 一、docker介绍
 
 ## 1、1 docker是什么
@@ -36,23 +58,23 @@ docker越来越受欢迎，主要是以下原因：
 
 ## 1、4 docker背后的核心技术
 
-Cgroup
-
-Namespace
-
-veth
-
-OCI标准
-
-ORI标准
-
-。。。。。。
+docker背后的核心技术的讲解会以动手实验 + 简要的原理分析 + 编程实战为主。
 
 
 
-小伙伴想进一步学习和实践docker的，我推荐一本开源书籍《Docker——从入门到实践》
+### 1） rootfs 和 chroot
 
-https://yeasy.gitbook.io/docker_practice/
+rootfs是什么？实践如何制作一个rootfs？
+
+chroot是什么？实验chroot的作用
+
+
+
+### 2）容器资源限制技术 Cgroup
+
+### 3） 容器资源隔离技术 Namespace
+
+### 4） 容器网络原理：veth、bridge网桥、nat
 
 
 
@@ -60,19 +82,19 @@ https://yeasy.gitbook.io/docker_practice/
 
 ## 2、1 为什么要写GeeDocker
 
-我本职工作是做容器安全的研发，需要深入研究docker的底层原理，看了一些docker源代码剖析的文章，但是感觉理解的不到位，所以萌生了仿写一个docker的项目。通过仿写项目，在实践理解核心知识点，在实践中解决问题，从而触发思考和总结。
+我本职工作是做容器安全和主机安全，需要深入研究docker的底层原理，但在看了一些docker源代码剖析的文章，但是感觉理解的模模糊糊的不到位，所以萌生了仿写一个docker的项目。通过仿写项目，在实践理解核心知识点，在实践中解决问题，从而触发思考和总结。
 
 
 
-docker项目的源代码庞大而复杂，不适合直接上手进行仿写，所以我仿写的是gocker这个开源项目，项目地址如下：
+由于docker项目(今天叫moby)经过N多版本的迭代后，加入的新特性导致源代码庞大而复杂，不适合直接上手进行仿写，所以我仿写的是gocker这个开源项目，项目地址如下：
 
 https://github.com/shuveb/containers-the-hard-way
 
-gocker是Go语言从头实现的mini版的Docker，包括Docker的核心功能，很满足我的心意。
+gocker是Go语言从头实现的mini版的Docker，包括Docker的核心功能，很符合我仿写的需求。
 
 
 
-## 2、2 实现的功能特性
+## 2、2 主要实现的功能特性
 
 ### 1）镜像管理
 
@@ -140,12 +162,26 @@ gocker exec <container-id> </path/to/command>
 
 # 三、目录
 
-- **第一天**：镜像的下载和解压
-- **第二天**：创建容器目录并将镜像挂载为OverlayFS
+- **第一天**：
+
+  [镜像的下载和解压]: https://zhuanlan.zhihu.com/p/466578317
+
+  
+
+- **第二天**：
+
+  [处理镜像Layer层数据]: https://zhuanlan.zhihu.com/p/466900752
+
+  
+
 - **第三天**：使用OverlayFS文件系统创建容器进程并运行
+
 - **第四天**：容器和宿主机通信，以及访问互联网
+
 - **第五天**：对容器进程进行资源隔离和限制
+
 - **第六天**：镜像枚举命令
+
 - **第七天**：镜像删除命令
 
 
