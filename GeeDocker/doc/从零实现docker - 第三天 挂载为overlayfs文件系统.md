@@ -1,4 +1,37 @@
-前面写代码
+**本文是 7天从零实现docker的第三篇 挂载为overlayfs文件系统**
+
+- 了解go-containerregistry的tarball镜像格式
+- 处理镜像多层Layer数据，**代码约60行**
+- 文件内容拷贝函数封装，**代码约30行**
+
+# 一、OverlayFS介绍
+
+## 1、1 OverlayFS是什么
+
+OverlayFS是一个面向Linux的文件系统服务，顾名思义是一种堆叠文件系统，可以将多个目录的内容 叠加到 另一个目录上。
+
+
+
+OverlayFS是一种联合文件系统(UnionFS)，可让你使用2个目录挂载文件系统：
+
+- lowerdir:“下层”目录
+- upperdir:“上层”目录
+
+基本上：
+
+◈ 文件系统的**下层**目录是只读的
+
+◈ 文件系统的**上层**目录可以读写
+
+上层目录和下层目录分工明确。
+
+
+
+## 1、2 overlayfs简单实践
+
+
+
+
 
 先约定几个目录
 
@@ -77,6 +110,8 @@ upperdir=/var/run/gocker/containers/1de5319fea58/fs/upperdir,
 workdir=/var/run/gocker/containers/1de5319fea58/fs/workdir
 
 分别设置了lowerdir，upperdir，workdir参数，这三个参数会在之前讲解。
+
+
 
 
 

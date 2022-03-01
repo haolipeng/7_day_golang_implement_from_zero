@@ -71,17 +71,25 @@ mount -t overlay overlay -o lowerdir=./lower/,upperdir=./upper/,workdir=./work/ 
 
 **lowerdir参数**：下层目录
 
-可以挂载多个下层目录，多个目录之间采用分号分隔。
+可以挂载多个下层目录，多个目录之间采用分号分隔，如下所示：
 
 ```
-mount -t overlay overlay -o lowerdir:/dir1:/dir2:/dir3:...:/dir25,upperdir=...
+mount -t overlay overlay -o lowerdir=/dir1:/dir2:/dir3 ./merged
 ```
+
+如示例所示，“upperdir=”和“workdir=”可以省略。在这种情况下，叠加层将是只读的。
+
+下层目录的叠加顺序是从最右边的一个，向左边走。lower1 将是顶层，lower2 中间层，lower3 底层。
 
 
 
 **upperdir参数**：上层目录
 
 
+
+merged目录：
+
+当lowerdir参数和upperdir参数都是目录时，merged目录就形成了。
 
 ## 2、3 合并后的目录结构
 
@@ -91,9 +99,15 @@ mount -t overlay overlay -o lowerdir:/dir1:/dir2:/dir3:...:/dir25,upperdir=...
 
 
 
-
-
 参考链接：
+
+linux官网overlayfs解释
+
+https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt
+
+视频教程
+
+https://de.coursera.org/lecture/dockerbasics/docker-storage-drivers-ExmJA
 
 公众号《Linux内核那些事》 容器三把斧之 | OverlayFS原理与实现
 
